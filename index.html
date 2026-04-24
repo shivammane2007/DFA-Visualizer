@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Automata Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/script.js" defer></script>
+</head>
+<body>
+
+<header>
+  <div class="logo-title">
+    <div class="logo">Σ</div>
+    <div>
+      <h2 class="title-font">Automata Visualizer</h2>
+      <div style="font-size: 0.8rem; color: var(--text-secondary)">DFA / NFA Simulator</div>
+    </div>
+  </div>
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btn-dfa" onclick="switchMode('DFA')">DFA</button>
+    <button class="mode-btn" id="btn-nfa" onclick="switchMode('NFA')">NFA</button>
+  </div>
+</header>
+
+<main>
+  <div class="left-panel">
+    <h3 class="title-font">✦ Define Automaton</h3>
+    
+    <div class="error-box" id="error-box">
+      <strong>Errors found:</strong>
+      <ul id="error-list"></ul>
+    </div>
+
+    <div style="display: flex; gap: 1rem;">
+      <div class="form-group" style="flex: 1;">
+        <label>States</label>
+        <input type="text" id="inp-states" value="q0, q1, q2" placeholder="q0, q1, q2">
+        <div class="hint">comma-separated</div>
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label>Alphabet</label>
+        <input type="text" id="inp-alphabet" value="0, 1" placeholder="a, b">
+        <div class="hint" id="hint-alphabet">comma-separated symbols</div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 1rem;">
+      <div class="form-group" style="flex: 1;">
+        <label>Start State</label>
+        <input type="text" id="inp-start" value="q0" placeholder="q0">
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label>Final States</label>
+        <input type="text" id="inp-final" value="q2" placeholder="q2">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Transitions</label>
+      <div class="transitions-container" id="transitions-container">
+        <!-- populated by JS -->
+      </div>
+      <button class="btn" onclick="addTransitionRow()">+ Add Transition</button>
+    </div>
+
+    <div class="form-group" style="margin-top: auto;">
+      <label>Input String</label>
+      <input type="text" id="inp-string" value="010" placeholder="e.g. 0101">
+    </div>
+
+    <button class="btn btn-primary" onclick="generateAndSimulate()">⚡ Generate & Simulate</button>
+  </div>
+
+  <div class="right-panel">
+    <div class="toolbar">
+      <div class="controls">
+        <button onclick="playSimulation()" title="Play">▶</button>
+        <button onclick="pauseSimulation()" title="Pause">⏸</button>
+        <button onclick="stepBackward()" title="Prev">⏮</button>
+        <button onclick="stepForward()" title="Next">⏭</button>
+        <button onclick="resetSimulation()" title="Reset">↺</button>
+        <div class="speed-slider">
+          <label style="margin:0;">Speed:</label>
+          <input type="range" id="speed-slider" min="200" max="2000" step="100" value="700" style="width:100px;">
+        </div>
+      </div>
+      <div class="export-btns">
+        <button onclick="exportSVG()">↓ SVG</button>
+        <button onclick="exportPNG()">↓ PNG</button>
+      </div>
+    </div>
+
+    <div class="canvas-container">
+      <div id="overlay" class="overlay-flash"></div>
+      <svg id="graph-svg" viewBox="0 0 900 400" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
+          </marker>
+          <marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
+          </marker>
+        </defs>
+        <g id="edges-layer"></g>
+        <g id="labels-layer"></g>
+        <g id="nodes-layer"></g>
+      </svg>
+    </div>
+
+    <div class="status-area">
+      <div class="step-info" id="step-info">Ready to simulate. Define your automaton and click Generate.</div>
+      <div class="result-badge" id="result-badge"></div>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>
