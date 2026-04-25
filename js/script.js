@@ -929,47 +929,37 @@ function showZoomLabel() {
 
 // ── EXPORT ─────────────────────────────────────────
 // ── EXPORT SYSTEM (FIXED) ──────────────────────────
-function createStyledExportClone(originalSvg) {
+function createStyledExportClone(originalSvg, steps = []) {
   const clone = originalSvg.cloneNode(true);
   
-  // 1. Setup dimensions from viewBox
+  // 1. Setup dimensions
   const viewBox = originalSvg.viewBox.baseVal;
   const width = viewBox.width || 900;
   const height = viewBox.height || 400;
   clone.setAttribute("width", width);
   clone.setAttribute("height", height);
 
-  // 2. Add solid dark background rect
+  // 2. Add Background Rect
   const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
   rect.setAttribute("width", "100%");
   rect.setAttribute("height", "100%");
   rect.setAttribute("fill", "#0d0d0f");
   clone.insertBefore(rect, clone.firstChild);
 
-  // 3. Inline all computed styles to ensure fidelity in standalone files
+  // 3. Inline Computed Styles
   const originalEls = originalSvg.querySelectorAll("*");
   const clonedEls = clone.querySelectorAll("*");
   
   for (let i = 0; i < originalEls.length; i++) {
     const o = originalEls[i];
-    const c = clonedEls[i + 1]; // Offset by 1 due to the background rect
+    const c = clonedEls[i + 1];
     if (!c) continue;
-
     const style = window.getComputedStyle(o);
-    const props = [
-      "fill", "stroke", "stroke-width", "stroke-dasharray", "opacity",
-      "font-size", "font-family", "font-weight", "text-anchor", "dominant-baseline",
-      "filter", "transform", "transform-origin", "display"
-    ];
-    
+    const props = ["fill", "stroke", "stroke-width", "stroke-dasharray", "opacity", "font-size", "font-family", "font-weight", "text-anchor", "dominant-baseline", "filter", "transform", "transform-origin", "display"];
     props.forEach(p => {
       const val = style.getPropertyValue(p);
-      if (val && val !== "none" && val !== "normal") {
-        c.style[p] = val;
-      }
+      if (val && val !== "none" && val !== "normal") c.style[p] = val;
     });
-
-    // Fix markers (often lost in export due to URL references)
     ["marker-start", "marker-end"].forEach(p => {
       const val = style.getPropertyValue(p);
       if (val && val.includes("url(")) {
@@ -979,18 +969,13 @@ function createStyledExportClone(originalSvg) {
     });
   }
 
-  // 4. Embed Animation Styles
+  // 4. Embed Animation Styles (Basic pulse + final state)
   const styleBlock = document.createElementNS("http://www.w3.org/2000/svg", "style");
   styleBlock.textContent = `
-    @keyframes pulse-glow {
-      0%, 100% { filter: drop-shadow(0 0 6px #7c3aed88); }
-      50% { filter: drop-shadow(0 0 18px #7c3aed88); }
-    }
-    .state-active { animation: pulse-glow 1.5s infinite !important; }
-    .state-accepted { filter: drop-shadow(0 0 12px #10b98188) !important; }
-    .state-rejected { filter: drop-shadow(0 0 12px #ef444488) !important; }
-    .edge-active { stroke: #a78bfa !important; stroke-width: 3 !important; }
-    .travel-dot.active { display: block !important; fill: #a78bfa !important; }
+    @keyframes pulse-glow { 0%, 100% { filter: drop-shadow(0 0 4px #7c3aed88); } 50% { filter: drop-shadow(0 0 12px #7c3aed88); } }
+    .state-accepted { animation: pulse-glow 2s infinite !important; }
+    .state-accepted circle { stroke: #10b981 !important; stroke-width: 3 !important; }
+    text { pointer-events: none; }
   `;
   
   let defs = clone.querySelector("defs");
@@ -1000,12 +985,97 @@ function createStyledExportClone(originalSvg) {
   }
   defs.appendChild(styleBlock);
 
+  // 5. Build SMIL Timeline if steps are present
+  if (steps && steps.length > 0) {
+    const stepDur = 1.0;
+    const totalDur = steps.length * stepDur;
+    
+    // Add particles for transitions
+    const particleGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    clone.appendChild(particleGroup);
+
+    steps.forEach((step, i) => {
+      if (i === 0) return; // Particles start at first transition
+      const startTime = (i - 1) * stepDur;
+      const endTime = i * stepDur;
+
+      const particle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      particle.setAttribute("r", "5");
+      particle.setAttribute("fill", "#a78bfa");
+      particle.setAttribute("opacity", "0");
+      
+      const move = document.createElementNS("http://www.w3.org/2000/svg", "animateMotion");
+      move.setAttribute("dur", `${totalDur}s`);
+      move.setAttribute("repeatCount", "indefinite");
+      move.setAttribute("keyPoints", "0;0;1;1");
+      move.setAttribute("keyTimes", `0;${startTime/totalDur};${endTime/totalDur};1`);
+      const mpath = document.createElementNS("http://www.w3.org/2000/svg", "mpath");
+      mpath.setAttributeNS("http://www.w3.org/1999/xlink", "href", `#${step.edgeId}`);
+      move.appendChild(mpath);
+      particle.appendChild(move);
+
+      const opac = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+      opac.setAttribute("attributeName", "opacity");
+      opac.setAttribute("dur", `${totalDur}s`);
+      opac.setAttribute("repeatCount", "indefinite");
+      opac.setAttribute("values", "0;0;1;1;0;0");
+      opac.setAttribute("keyTimes", `0;${startTime/totalDur};${(startTime+0.1)/totalDur};${(endTime-0.1)/totalDur};${endTime/totalDur};1`);
+      particle.appendChild(opac);
+      particleGroup.appendChild(particle);
+
+      // Edge glow during transition
+      const edge = clone.querySelector(`#${step.edgeId}`);
+      if (edge) {
+        const edgeAnim = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+        edgeAnim.setAttribute("attributeName", "stroke");
+        edgeAnim.setAttribute("dur", `${totalDur}s`);
+        edgeAnim.setAttribute("repeatCount", "indefinite");
+        const baseColor = edge.style.stroke || "#475569";
+        edgeAnim.setAttribute("values", `${baseColor};${baseColor};#8b5cf6;${baseColor};${baseColor}`);
+        edgeAnim.setAttribute("keyTimes", `0;${startTime/totalDur};${(startTime+endTime)/2/totalDur};${endTime/totalDur};1`);
+        edge.appendChild(edgeAnim);
+      }
+    });
+
+    // Node state highlights
+    const uniqueStates = [...new Set(steps.map(s => s.state))];
+    uniqueStates.forEach(stateId => {
+      const nodeG = clone.querySelector(`#node-${stateId}`);
+      const circle = nodeG?.querySelector('circle');
+      if (!circle) return;
+
+      const nodeAnim = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+      nodeAnim.setAttribute("attributeName", "stroke");
+      nodeAnim.setAttribute("dur", `${totalDur}s`);
+      nodeAnim.setAttribute("repeatCount", "indefinite");
+      
+      const baseStroke = circle.style.stroke || "#475569";
+      let values = [baseStroke];
+      let keyTimes = [0];
+      
+      steps.forEach((s, idx) => {
+        const time = idx * stepDur;
+        const isActive = s.state === stateId;
+        values.push(isActive ? "#8b5cf6" : baseStroke);
+        keyTimes.push(time / totalDur);
+      });
+      
+      values.push(values[values.length-1]);
+      keyTimes.push(1);
+      
+      nodeAnim.setAttribute("values", values.join(";"));
+      nodeAnim.setAttribute("keyTimes", keyTimes.join(";"));
+      circle.appendChild(nodeAnim);
+    });
+  }
+
   return clone;
 }
 
 function exportSVG() {
   const svgEl = document.getElementById('graph-svg');
-  const styledClone = createStyledExportClone(svgEl);
+  // Pass simulationSteps if they exist to create an animated loop
+  const styledClone = createStyledExportClone(svgEl, simulationSteps);
   const serializer = new XMLSerializer();
   let svgData = serializer.serializeToString(styledClone);
   
