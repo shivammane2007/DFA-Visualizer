@@ -74,39 +74,49 @@
   </div>
 
   <div class="right-panel">
-    <div class="toolbar">
-      <div class="controls">
-        <button onclick="playSimulation()" title="Play">▶</button>
-        <button onclick="pauseSimulation()" title="Pause">⏸</button>
-        <button onclick="stepBackward()" title="Prev">⏮</button>
-        <button onclick="stepForward()" title="Next">⏭</button>
-        <button onclick="resetSimulation()" title="Reset">↺</button>
-        <div class="speed-slider">
-          <label style="margin:0;">Speed:</label>
-          <input type="range" id="speed-slider" min="200" max="2000" step="100" value="700" style="width:100px;">
+    <div id="graph-view-panel">
+      <div class="toolbar">
+        <div class="controls">
+          <button onclick="playSimulation()" title="Play">▶</button>
+          <button onclick="pauseSimulation()" title="Pause">⏸</button>
+          <button onclick="stepBackward()" title="Prev">⏮</button>
+          <button onclick="stepForward()" title="Next">⏭</button>
+          <button onclick="resetSimulation()" title="Reset">↺</button>
+          <div class="speed-slider">
+            <label style="margin:0;">Speed:</label>
+            <input type="range" id="speed-slider" min="200" max="2000" step="100" value="700" style="width:100px;">
+          </div>
+        </div>
+        <div class="export-btns">
+          <button id="btn-zoom-in" onclick="handleZoomIn()" title="Zoom In">+</button>
+          <button id="btn-zoom-out" onclick="handleZoomOut()" title="Zoom Out">−</button>
+          <button id="btn-fullscreen" onclick="toggleFullscreen()" title="Fullscreen">⛶</button>
+          <button onclick="exportSVG()">↓ SVG</button>
+          <button onclick="exportPNG()">↓ PNG</button>
         </div>
       </div>
-      <div class="export-btns">
-        <button onclick="exportSVG()">↓ SVG</button>
-        <button onclick="exportPNG()">↓ PNG</button>
-      </div>
-    </div>
 
-    <div class="canvas-container">
-      <div id="overlay" class="overlay-flash"></div>
-      <svg id="graph-svg" viewBox="0 0 900 400" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
-          </marker>
-          <marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
-          </marker>
-        </defs>
-        <g id="edges-layer"></g>
-        <g id="labels-layer"></g>
-        <g id="nodes-layer"></g>
-      </svg>
+      <div class="canvas-container">
+        <div id="overlay" class="overlay-flash"></div>
+        <div id="graphViewport" class="graph-viewport">
+          <div id="zoom-label" class="zoom-label">100%</div>
+          <div id="graphTransformLayer" class="graph-transform-layer">
+            <svg id="graph-svg" viewBox="0 0 900 400" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
+                </marker>
+                <marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="currentColor"/>
+                </marker>
+              </defs>
+              <g id="edges-layer"></g>
+              <g id="labels-layer"></g>
+              <g id="nodes-layer"></g>
+            </svg>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="status-area">

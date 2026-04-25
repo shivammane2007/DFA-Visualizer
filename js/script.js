@@ -36,6 +36,25 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   updateSpeedBackground();
   
+  // Graph View Listeners
+  const viewport = document.getElementById('graphViewport');
+  viewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (e.deltaY < 0) handleZoomIn();
+    else handleZoomOut();
+  }, { passive: false });
+
+  document.addEventListener('fullscreenchange', () => {
+    const btn = document.getElementById('btn-fullscreen');
+    if (document.fullscreenElement) {
+      btn.textContent = '❐'; // Exit icon
+      btn.title = "Exit Fullscreen";
+    } else {
+      btn.textContent = '⛶'; // Expand icon
+      btn.title = "Fullscreen";
+    }
+  });
+  
   // Set initial marker colors
   document.getElementById('arrowhead').style.color = 'var(--edge-color)';
   document.getElementById('arrowhead-active').style.color = 'var(--active-edge)';
@@ -848,6 +867,64 @@ function resetSimulation() {
   pauseSimulation();
   currentStepIndex = -1;
   highlightStep(-1);
+}
+
+// ── GRAPH VIEW CONTROLS ────────────────────────────
+let currentZoom = 1.0;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 3.0;
+const ZOOM_STEP = 0.1;
+
+function handleZoomIn() {
+  if (currentZoom < ZOOM_MAX) {
+    currentZoom = Math.min(ZOOM_MAX, currentZoom + ZOOM_STEP);
+    updateZoomTransform();
+    showZoomLabel();
+  }
+}
+
+function handleZoomOut() {
+  if (currentZoom > ZOOM_MIN) {
+    currentZoom = Math.max(ZOOM_MIN, currentZoom - ZOOM_STEP);
+    updateZoomTransform();
+    showZoomLabel();
+  }
+}
+
+function updateZoomTransform() {
+  const layer = document.getElementById('graphTransformLayer');
+  layer.style.transform = `scale(${currentZoom})`;
+  
+  // UI Feedback: Dim buttons at limits
+  document.getElementById('btn-zoom-in').style.opacity = currentZoom >= ZOOM_MAX ? '0.3' : '1';
+  document.getElementById('btn-zoom-out').style.opacity = currentZoom <= ZOOM_MIN ? '0.3' : '1';
+}
+
+function toggleFullscreen() {
+  const panel = document.getElementById('graph-view-panel');
+  if (!document.fullscreenElement) {
+    if (panel.requestFullscreen) {
+      panel.requestFullscreen();
+    } else if (panel.webkitRequestFullscreen) {
+      panel.webkitRequestFullscreen();
+    }
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
+}
+
+let zoomLabelTimer = null;
+function showZoomLabel() {
+  const label = document.getElementById('zoom-label');
+  label.textContent = `${Math.round(currentZoom * 100)}%`;
+  label.classList.add('show');
+  
+  if (zoomLabelTimer) clearTimeout(zoomLabelTimer);
+  zoomLabelTimer = setTimeout(() => {
+    label.classList.remove('show');
+  }, 1000);
 }
 
 // ── EXPORT ─────────────────────────────────────────
