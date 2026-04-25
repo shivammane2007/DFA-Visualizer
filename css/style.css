@@ -139,6 +139,48 @@ input:focus { border-color: var(--accent-purple); }
 }
 .controls button:hover { border-color: var(--accent-purple); }
 .speed-slider { display: flex; align-items: center; gap: 0.5rem; margin-left: 1rem; color: var(--text-secondary); font-size: 0.85rem; }
+.speed-slider input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100px;
+  height: 6px;
+  background: var(--border-color);
+  border-radius: 10px;
+  outline: none;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+}
+.speed-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--accent-purple);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--panel-bg);
+  box-shadow: 0 0 5px rgba(0,0,0,0.5);
+  transition: transform 0.2s, background 0.2s;
+}
+.speed-slider input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: var(--active-edge);
+}
+.speed-slider input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--accent-purple);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--panel-bg);
+  box-shadow: 0 0 5px rgba(0,0,0,0.5);
+  transition: transform 0.2s, background 0.2s;
+}
+.speed-slider input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  background: var(--active-edge);
+}
 
 .export-btns { display: flex; gap: 0.5rem; }
 .export-btns button {

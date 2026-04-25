@@ -24,9 +24,17 @@ document.addEventListener("DOMContentLoaded", () => {
   addTransitionRow('q2', '0', 'q1');
   addTransitionRow('q2', '1', 'q0');
   
-  document.getElementById('speed-slider').addEventListener('input', (e) => {
+  const speedSlider = document.getElementById('speed-slider');
+  const updateSpeedBackground = () => {
+    const val = (speedSlider.value - speedSlider.min) / (speedSlider.max - speedSlider.min) * 100;
+    speedSlider.style.background = `linear-gradient(to right, var(--accent-purple) ${val}%, var(--border-color) ${val}%)`;
+  };
+  
+  speedSlider.addEventListener('input', (e) => {
     animationSpeed = parseInt(e.target.value);
+    updateSpeedBackground();
   });
+  updateSpeedBackground();
   
   // Set initial marker colors
   document.getElementById('arrowhead').style.color = 'var(--edge-color)';
