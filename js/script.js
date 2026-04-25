@@ -9,7 +9,7 @@ let transitions = new Map(); // Map<fromState, Map<symbol, toStates[]>>
 // Animation state
 let simulationSteps = [];
 let currentStepIndex = -1;
-let animationSpeed = 700;
+let animationSpeed = 1500;
 let animationTimer = null;
 let animFrames = [];
 let simulationResult = { accepted: false, error: null };
@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   
   speedSlider.addEventListener('input', (e) => {
-    animationSpeed = parseInt(e.target.value);
+    animationSpeed = 2200 - parseInt(e.target.value);
     updateSpeedBackground();
   });
   updateSpeedBackground();
