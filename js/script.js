@@ -928,61 +928,131 @@ function showZoomLabel() {
 }
 
 // ── EXPORT ─────────────────────────────────────────
-function getSVGString() {
-  const svgEl = document.getElementById('graph-svg');
-  const clone = svgEl.cloneNode(true);
+// ── EXPORT SYSTEM (FIXED) ──────────────────────────
+function createStyledExportClone(originalSvg) {
+  const clone = originalSvg.cloneNode(true);
   
-  // Maintain dynamic viewBox exact scale but give a fallback absolute dimension for some renderers
-  const viewBox = clone.getAttribute('viewBox').split(' ').map(Number);
-  clone.setAttribute('width', viewBox[2] || '900');
-  clone.setAttribute('height', viewBox[3] || '400');
+  // 1. Setup dimensions from viewBox
+  const viewBox = originalSvg.viewBox.baseVal;
+  const width = viewBox.width || 900;
+  const height = viewBox.height || 400;
+  clone.setAttribute("width", width);
+  clone.setAttribute("height", height);
+
+  // 2. Add solid dark background rect
+  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  rect.setAttribute("width", "100%");
+  rect.setAttribute("height", "100%");
+  rect.setAttribute("fill", "#0d0d0f");
+  clone.insertBefore(rect, clone.firstChild);
+
+  // 3. Inline all computed styles to ensure fidelity in standalone files
+  const originalEls = originalSvg.querySelectorAll("*");
+  const clonedEls = clone.querySelectorAll("*");
   
-  return new XMLSerializer().serializeToString(clone);
+  for (let i = 0; i < originalEls.length; i++) {
+    const o = originalEls[i];
+    const c = clonedEls[i + 1]; // Offset by 1 due to the background rect
+    if (!c) continue;
+
+    const style = window.getComputedStyle(o);
+    const props = [
+      "fill", "stroke", "stroke-width", "stroke-dasharray", "opacity",
+      "font-size", "font-family", "font-weight", "text-anchor", "dominant-baseline",
+      "filter", "transform", "transform-origin", "display"
+    ];
+    
+    props.forEach(p => {
+      const val = style.getPropertyValue(p);
+      if (val && val !== "none" && val !== "normal") {
+        c.style[p] = val;
+      }
+    });
+
+    // Fix markers (often lost in export due to URL references)
+    ["marker-start", "marker-end"].forEach(p => {
+      const val = style.getPropertyValue(p);
+      if (val && val.includes("url(")) {
+        const idMatch = val.match(/#([^"']+)/);
+        if (idMatch) c.setAttribute(p, `url(#${idMatch[1]})`);
+      }
+    });
+  }
+
+  // 4. Embed Animation Styles
+  const styleBlock = document.createElementNS("http://www.w3.org/2000/svg", "style");
+  styleBlock.textContent = `
+    @keyframes pulse-glow {
+      0%, 100% { filter: drop-shadow(0 0 6px #7c3aed88); }
+      50% { filter: drop-shadow(0 0 18px #7c3aed88); }
+    }
+    .state-active { animation: pulse-glow 1.5s infinite !important; }
+    .state-accepted { filter: drop-shadow(0 0 12px #10b98188) !important; }
+    .state-rejected { filter: drop-shadow(0 0 12px #ef444488) !important; }
+    .edge-active { stroke: #a78bfa !important; stroke-width: 3 !important; }
+    .travel-dot.active { display: block !important; fill: #a78bfa !important; }
+  `;
+  
+  let defs = clone.querySelector("defs");
+  if (!defs) {
+    defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    clone.appendChild(defs);
+  }
+  defs.appendChild(styleBlock);
+
+  return clone;
 }
 
 function exportSVG() {
-  const svgData = getSVGString();
-  const blob = new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + svgData], {type: "image/svg+xml;charset=utf-8"});
+  const svgEl = document.getElementById('graph-svg');
+  const styledClone = createStyledExportClone(svgEl);
+  const serializer = new XMLSerializer();
+  let svgData = serializer.serializeToString(styledClone);
+  
+  // Add XML declaration
+  svgData = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n' + svgData;
+  
+  const blob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = "automaton.svg";
-  document.body.appendChild(link);
   link.click();
-  document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
 
 function exportPNG() {
   const svgEl = document.getElementById('graph-svg');
-  const viewBox = svgEl.getAttribute('viewBox').split(' ').map(Number);
+  const styledClone = createStyledExportClone(svgEl);
+  const serializer = new XMLSerializer();
+  const svgData = serializer.serializeToString(styledClone);
   
+  const width = parseInt(styledClone.getAttribute("width"));
+  const height = parseInt(styledClone.getAttribute("height"));
+  const scale = 3; // 3x High resolution
+
   const canvas = document.createElement("canvas");
+  canvas.width = width * scale;
+  canvas.height = height * scale;
   const ctx = canvas.getContext("2d");
-  
-  // Scale up for high-resolution PNG
-  const scale = 2; 
-  canvas.width = viewBox[2] * scale;
-  canvas.height = viewBox[3] * scale;
-  
-  ctx.fillStyle = "#0d0d0f"; // Match var(--bg-color)
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  const svgData = getSVGString();
+
   const img = new Image();
-  const svgBlob = new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + svgData], {type: "image/svg+xml;charset=utf-8"});
+  const svgBlob = new Blob([svgData], {type: "image/svg+xml;charset=utf-8"});
   const url = URL.createObjectURL(svgBlob);
-  
-  img.onload = function () {
-    // Draw scaled
+
+  img.onload = function() {
+    // Canvas background
+    ctx.fillStyle = "#0d0d0f";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw SVG
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    
     const pngUrl = canvas.toDataURL("image/png");
     const link = document.createElement("a");
     link.href = pngUrl;
     link.download = "automaton.png";
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
   img.src = url;
