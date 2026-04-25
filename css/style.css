@@ -83,6 +83,55 @@ main {
   background-size: 20px 20px;
 }
 
+/* AI Problem Generator Styles */
+.generator-card {
+  background: rgba(124, 58, 237, 0.05);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+.glow-input {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  outline: none;
+  transition: all 0.3s ease;
+  width: 100%;
+  resize: vertical;
+}
+.glow-input:focus {
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 10px rgba(124, 58, 237, 0.3);
+}
+.btn-secondary {
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid var(--accent-purple);
+  color: var(--accent-purple);
+  font-weight: bold;
+}
+.btn-secondary:hover {
+  background: var(--accent-purple);
+  color: white !important;
+}
+.dropdown { position: relative; display: inline-block; }
+.dropdown-btn { padding: 0.2rem 0.5rem; font-size: 0.75rem; background: var(--bg-color); border-style: solid; }
+.dropdown-content {
+  display: none; position: absolute; right: 0; top: 100%; background-color: var(--panel-bg);
+  min-width: 180px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5); z-index: 100; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;
+}
+.dropdown-content a {
+  color: var(--text-primary); padding: 0.5rem 0.8rem; text-decoration: none; display: block; font-size: 0.8rem; border-bottom: 1px solid var(--border-color);
+}
+.dropdown-content a:last-child { border-bottom: none; }
+.dropdown-content a:hover { background-color: rgba(124, 58, 237, 0.2); }
+.dropdown:hover .dropdown-content { display: block; }
+.divider { height: 1px; background: var(--border-color); margin: 1.5rem 0; width: 100%; }
+.generator-error { color: #fca5a5; font-size: 0.8rem; margin-top: 0.5rem; background: rgba(239, 68, 68, 0.1); padding: 0.5rem; border-radius: 4px; }
+
 /* Form Styles */
 .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
 label { font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }

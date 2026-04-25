@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <script src="js/script.js" defer></script>
+<script src="js/generator.js" defer></script>
 </head>
 <body>
 
@@ -27,6 +28,32 @@
 <main>
   <div class="left-panel">
     <h3 class="title-font">✦ Define Automaton</h3>
+    
+    <!-- AI Problem Generator Section -->
+    <div class="generator-card">
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <label style="color: var(--accent-purple); font-weight: bold;">Automaton Problem Generator</label>
+          <div class="dropdown">
+            <button class="btn btn-small dropdown-btn" tabindex="-1">Examples ▼</button>
+            <div class="dropdown-content">
+              <a href="#" onclick="loadProblemExample('starts with 0')">Easy: starts with 0</a>
+              <a href="#" onclick="loadProblemExample('contains substring 010')">Medium: contains 010</a>
+              <a href="#" onclick="loadProblemExample('even number of 1s')">Medium: even 1s</a>
+              <a href="#" onclick="loadProblemExample('divisible by 3')">Hard: binary divisible by 3</a>
+            </div>
+          </div>
+        </div>
+        <textarea id="inp-problem" rows="2" placeholder="e.g. Create DFA where string contains substring 010..." class="glow-input"></textarea>
+      </div>
+      <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+        <button class="btn btn-secondary" style="flex: 1; border-color: var(--accent-purple); color: var(--accent-purple);" onclick="generateFromProblem()">✨ Generate Automaton</button>
+        <button class="btn" onclick="clearProblem()">Clear</button>
+      </div>
+      <div class="generator-error" id="generator-error" style="display: none;"></div>
+    </div>
+
+    <div class="divider"></div>
     
     <div class="error-box" id="error-box">
       <strong>Errors found:</strong>
