@@ -39,7 +39,8 @@ function parseProblem(text) {
   const t = text.toLowerCase().replace(/[.,]/g, '').trim();
   
   // 1. Starts with
-  let m = t.match(/starts with ([a-z0-9]+)/);
+  let m = t.match(/(?:start|starts|starting|begins|begin)\s+with\s+([a-z0-9]+)/);
+  if (!m) m = t.match(/prefix\s+([a-z0-9]+)/);
   if (m) return generateStartsWith(m[1]);
 
   // 2. Ends with
@@ -75,34 +76,42 @@ function getAlphabet(str) {
   return chars.length > 0 ? chars : ['0', '1'];
 }
 
-function generateStartsWith(str) {
-  const alphabet = getAlphabet(str);
+function generateStartsWith(pattern) {
+  const alphabet = getAlphabet(pattern);
   const states = [];
+  
+  for (let i = 0; i <= pattern.length; i++) {
+    states.push(`q${i}`);
+  }
+  states.push("qd");
+  
+  const final = [`q${pattern.length}`];
   const transitions = [];
   
-  // States: q0, q1, ..., qN (where qN is accept) and qd (dead state)
-  for (let i = 0; i <= str.length; i++) states.push(`q${i}`);
-  const trap = 'qd';
-  states.push(trap);
-  
-  for (let i = 0; i < str.length; i++) {
-    const char = str[i];
-    alphabet.forEach(sym => {
-      if (sym === char) {
-        transitions.push({ from: `q${i}`, symbol: sym, to: `q${i+1}` });
-      } else {
-        transitions.push({ from: `q${i}`, symbol: sym, to: trap });
-      }
-    });
+  for (let i = 0; i < pattern.length; i++) {
+    for (const sym of alphabet) {
+      const to = sym === pattern[i] ? `q${i+1}` : "qd";
+      transitions.push({
+        from: `q${i}`,
+        symbol: sym,
+        to
+      });
+    }
   }
   
-  // Final state loops
-  alphabet.forEach(sym => {
-    transitions.push({ from: `q${str.length}`, symbol: sym, to: `q${str.length}` });
-    transitions.push({ from: trap, symbol: sym, to: trap });
-  });
+  for (const sym of alphabet) {
+    transitions.push({ from: `q${pattern.length}`, symbol: sym, to: `q${pattern.length}` });
+    transitions.push({ from: "qd", symbol: sym, to: "qd" });
+  }
   
-  return { type: 'DFA', states, alphabet, start: 'q0', final: [`q${str.length}`], transitions };
+  return {
+    type: "DFA",
+    states,
+    alphabet,
+    start: "q0",
+    final,
+    transitions
+  };
 }
 
 function generateEndsWith(str) {
