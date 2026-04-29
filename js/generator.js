@@ -12,6 +12,7 @@ function clearProblem() {
 function showError(msg) {
   const errDiv = document.getElementById('generator-error');
   errDiv.textContent = msg;
+  errDiv.style.whiteSpace = 'pre-wrap';
   errDiv.style.display = 'block';
 }
 
@@ -26,7 +27,7 @@ function generateFromProblem() {
   try {
     const dfa = parseProblem(text);
     if (!dfa) {
-      showError("Unable to generate automaton for this problem.");
+      showError("Unable to generate automaton for this problem.\n\nDid you mean:\n- at most 2 zeros\n- at least 2 zeros\n- exactly 2 zeros");
       return;
     }
     fillExistingForm(dfa);
@@ -35,11 +36,44 @@ function generateFromProblem() {
   }
 }
 
+function getSymbolFromWord(word) {
+  return (word === 'zeros' || word === 'zero') ? '0' : '1';
+}
+
+function otherSymbol(sym) {
+  return sym === '0' ? '1' : '0';
+}
+
 function parseProblem(text) {
-  const t = text.toLowerCase().replace(/[.,]/g, '').trim();
+  let t = text.toLowerCase().replace(/[.,]/g, '').trim();
+  t = t.replace(/\s+/g, ' '); // Normalize spaces
   
+  // Apply typo correction
+  const typoMap = {
+    'almost': 'at most',
+    'atleast': 'at least',
+    'upto': 'up to',
+    'zeroes': 'zeros',
+    "one's": 'ones'
+  };
+  for (const [wrong, right] of Object.entries(typoMap)) {
+    t = t.replace(new RegExp(`\\b${wrong}\\b`, 'g'), right);
+  }
+
+  let m;
+
+  // Quantity Patterns
+  m = t.match(/(?:at most|maximum|no more than|up to|<=)\s+(\d+)\s+(zeros|ones)/);
+  if (m) return generateAtMostCount(getSymbolFromWord(m[2]), parseInt(m[1], 10));
+
+  m = t.match(/(?:at least|minimum|not less than|>=)\s+(\d+)\s+(zeros|ones)/);
+  if (m) return generateAtLeastCount(getSymbolFromWord(m[2]), parseInt(m[1], 10));
+
+  m = t.match(/(?:exactly|equal to|=)\s+(\d+)\s+(zeros|ones)/);
+  if (m) return generateExactlyCount(getSymbolFromWord(m[2]), parseInt(m[1], 10));
+
   // 1. Starts with
-  let m = t.match(/(?:start|starts|starting|begins|begin)\s+with\s+([a-z0-9]+)/);
+  m = t.match(/(?:start|starts|starting|begins|begin)\s+with\s+([a-z0-9]+)/);
   if (!m) m = t.match(/prefix\s+([a-z0-9]+)/);
   if (m) return generateStartsWith(m[1]);
 
@@ -51,7 +85,7 @@ function parseProblem(text) {
   m = t.match(/contains substring ([a-z0-9]+)/) || t.match(/contains ([a-z0-9]+)/) || t.match(/substring ([a-z0-9]+)/);
   if (m) return generateContains(m[1]);
 
-  // 4. Exactly
+  // 4. Exactly string
   m = t.match(/exactly ([a-z0-9]+)/);
   if (m) return generateExactly(m[1]);
 
@@ -63,8 +97,19 @@ function parseProblem(text) {
   if (m) return generateParity(m[1], 'odd');
 
   // 6. Divisible
-  m = t.match(/divisible by (\d+)/);
-  if (m) return generateDivisible(parseInt(m[1], 10));
+  m = t.match(/(?:divisible by|multiple of|mod)\s*(\d+)/);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    let base = 2; // Default
+    if (/(?:ternary|trinary|base\s*3|base3|radix\s*3)/.test(t)) {
+      base = 3;
+    } else if (/(?:decimal|base\s*10|base10|denary|digits?|number|integer)/.test(t)) {
+      base = 10;
+    } else if (/(?:binary|base\s*2|base2)/.test(t)) {
+      base = 2;
+    }
+    return generateBaseDivisibleDFA(base, n);
+  }
 
   return null;
 }
@@ -220,21 +265,29 @@ function generateParity(char, type) {
   return { type: 'DFA', states, alphabet, start: 'qEven', final: [finalState], transitions };
 }
 
-function generateDivisible(n) {
-  if (n < 1 || n > 20) throw new Error("Please specify a number between 1 and 20.");
-  
-  const alphabet = ['0', '1'];
-  const states = [];
+function generateBaseDivisibleDFA(base, n) {
+  if (n < 1 || n > 25) throw new Error("Please specify a divisor between 1 and 25.");
+  const states = Array.from({length:n}, (_,i)=>`q${i}`);
+  const alphabet = Array.from({length:base}, (_,i)=>String(i));
   const transitions = [];
-  
-  for (let i = 0; i < n; i++) states.push(`q${i}`);
-  
-  for (let i = 0; i < n; i++) {
-    transitions.push({ from: `q${i}`, symbol: '0', to: `q${(i * 2) % n}` });
-    transitions.push({ from: `q${i}`, symbol: '1', to: `q${(i * 2 + 1) % n}` });
+  for (let r = 0; r < n; r++) {
+    for (let d = 0; d < base; d++) {
+      const next = (r * base + d) % n;
+      transitions.push({
+        from: `q${r}`,
+        symbol: String(d),
+        to: `q${next}`
+      });
+    }
   }
-  
-  return { type: 'DFA', states, alphabet, start: 'q0', final: ['q0'], transitions };
+  return {
+    type: "DFA",
+    states,
+    alphabet,
+    start: "q0",
+    final: ["q0"],
+    transitions
+  };
 }
 
 function preserveInputString() {
@@ -285,4 +338,85 @@ function fillExistingForm(dfa) {
   const el = document.getElementById('inp-string');
   if (el) el.value = existingInput;
   triggerRender();
+}
+
+function generateAtMostCount(symbol, k) {
+  const states = [];
+  for (let i = 0; i <= k; i++) states.push(`q${i}`);
+  states.push(`q${k+1}`);
+
+  const final = [];
+  for (let i = 0; i <= k; i++) final.push(`q${i}`);
+
+  const transitions = [];
+  for (let i = 0; i <= k; i++) {
+    transitions.push({
+      from: `q${i}`,
+      symbol,
+      to: i === k ? `q${k+1}` : `q${i+1}`
+    });
+    transitions.push({
+      from: `q${i}`,
+      symbol: otherSymbol(symbol),
+      to: `q${i}`
+    });
+  }
+
+  transitions.push({ from: `q${k+1}`, symbol: "0", to: `q${k+1}` });
+  transitions.push({ from: `q${k+1}`, symbol: "1", to: `q${k+1}` });
+
+  return { type: 'DFA', states, alphabet: ['0', '1'], start: 'q0', final, transitions };
+}
+
+function generateAtLeastCount(symbol, k) {
+  const states = [];
+  for (let i = 0; i <= k; i++) states.push(`q${i}`);
+
+  const final = [`q${k}`];
+
+  const transitions = [];
+  for (let i = 0; i < k; i++) {
+    transitions.push({
+      from: `q${i}`,
+      symbol,
+      to: `q${i+1}`
+    });
+    transitions.push({
+      from: `q${i}`,
+      symbol: otherSymbol(symbol),
+      to: `q${i}`
+    });
+  }
+
+  transitions.push({ from: `q${k}`, symbol: "0", to: `q${k}` });
+  transitions.push({ from: `q${k}`, symbol: "1", to: `q${k}` });
+
+  return { type: 'DFA', states, alphabet: ['0', '1'], start: 'q0', final, transitions };
+}
+
+function generateExactlyCount(symbol, k) {
+  const states = [];
+  for (let i = 0; i <= k; i++) states.push(`q${i}`);
+  states.push(`q${k+1}`);
+
+  const final = [`q${k}`];
+
+  const transitions = [];
+  for (let i = 0; i <= k; i++) {
+    transitions.push({
+      from: `q${i}`,
+      symbol,
+      to: i === k ? `q${k+1}` : `q${i+1}`
+    });
+    transitions.push({
+      from: `q${i}`,
+      symbol: otherSymbol(symbol),
+      to: `q${i}`
+    });
+  }
+
+  transitions.push({ from: `q${k+1}`, symbol: "0", to: `q${k+1}` });
+  transitions.push({ from: `q${k+1}`, symbol: "1", to: `q${k+1}` });
+
+  return { type: 'DFA', states, alphabet: ['0', '1'], start: 'q0', final, transitions };
 }
